@@ -703,7 +703,7 @@ startBtn.addEventListener('click', () => {
   state.players = names;
   state.rounds   = Math.max(1, Math.min(20, parseInt(roundsInput.value) || 3));
   state.turnTime = Math.max(30, Math.min(300, parseInt(timeInput.value) || 90));
-  state.letterRevealInterval = Math.max(5, Math.floor(state.turnTime / 6));
+  state.letterRevealInterval = 5; // will be recalculated per turn based on word length
 
   state.currentRound     = 1;
   state.currentPlayerIdx = 0;
@@ -741,6 +741,9 @@ function startTurn() {
   state.currentWord = word;
   state.revealedIndices = new Set();
   state.timeLeft = state.turnTime;
+  const letterCount = getTotalLetterCount();
+  // Reveal cadence: totalTime / (letters - 2). Guard for tiny words to avoid divide-by-zero.
+  state.letterRevealInterval = Math.max(1, Math.floor(state.turnTime / Math.max(1, letterCount - 2)));
   state.revealTimeLeft = state.letterRevealInterval;
 
   // UI
