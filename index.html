@@ -290,15 +290,21 @@
     #endSummary li { padding: .35rem 0; border-bottom: 1px solid #2a2a4a; font-size: .95rem; }
     #endSummary li:last-child { border: none; }
 
-    /* ── Word Reveal Modal ────────────────────────────── */
+    /* ── Overlays ─────────────────────────────────────── */
     .overlay {
       position: fixed; inset: 0;
-      background: rgba(0,0,0,.8);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 100;
       display: none;
+      align-items: center; justify-content: center;
+      z-index: 100;
     }
     .overlay.open { display: flex; }
+
+    /* Standard modal (semi-transparent bg) */
+    .overlay-dim { background: rgba(0,0,0,.8); }
+
+    /* Full-screen solid overlays (no peeking!) */
+    .overlay-solid { background: #0a0a18; }
+
     .modal-box {
       background: var(--card);
       border-radius: var(--radius);
@@ -318,9 +324,57 @@
       letter-spacing: 2px;
     }
 
-    /* ── Drawer Word Modal (private peek) ─────────────── */
-    #drawerModal .modal-box { border: 2px solid var(--accent); }
-    #drawerModal .modal-word { color: #ffd54f; font-size: 2.8rem; }
+    /* ── Look-away gate (Step 1) ──────────────────────── */
+    #lookAwayGate .modal-box {
+      border: 2px solid var(--muted);
+      max-width: 480px;
+    }
+    #lookAwayGate .big-emoji { font-size: 4rem; margin-bottom: .4rem; }
+    #lookAwayGate h2 { font-size: 1.8rem; }
+    #lookAwayGate .player-spotlight {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent);
+      background: rgba(233,69,96,.12);
+      border-radius: 8px;
+      padding: .5rem 1rem;
+      margin: .8rem 0 1rem;
+      display: inline-block;
+    }
+    #lookAwayGate .gate-instruction {
+      color: var(--muted);
+      font-size: .95rem;
+      margin-bottom: 1.4rem;
+    }
+    #lookAwayGate .gate-instruction strong { color: var(--text); }
+
+    /* ── Private word peek (Step 2) ──────────────────── */
+    #drawerPeekModal .modal-box {
+      border: 2px solid #ffd54f;
+      max-width: 480px;
+    }
+    #drawerPeekModal .modal-word {
+      color: #ffd54f;
+      font-size: 2.6rem;
+      background: rgba(255,213,79,.08);
+      border-radius: 10px;
+      padding: .5rem 1.2rem;
+    }
+    #drawerPeekModal .peek-label {
+      color: var(--muted);
+      font-size: .85rem;
+      margin-bottom: .6rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    #drawerPeekModal .peek-hint {
+      color: var(--muted);
+      margin: .8rem 0 1.4rem;
+      font-size: .9rem;
+    }
+
+    /* ── Word spacer between word groups ──────────────── */
+    .word-spacer { width: .6rem; flex-shrink: 0; }
 
     /* ── Error messages ───────────────────────────────── */
     .error { color: var(--accent); font-size: .85rem; margin-top: .4rem; display: none; }
@@ -434,19 +488,35 @@
   </div>
 </div>
 
-<!-- ── DRAWER WORD MODAL (private peek at turn start) ─────── -->
-<div id="drawerModal" class="overlay">
+<!-- ── STEP 1: LOOK-AWAY GATE (everyone sees this) ────────── -->
+<div id="lookAwayGate" class="overlay overlay-dim">
   <div class="modal-box">
-    <h2>🎨 Your turn to draw!</h2>
-    <p style="color:var(--muted);font-size:.95rem;margin-bottom:.5rem">Only <strong id="drawerPeekName" style="color:var(--text)"></strong> should look now</p>
+    <div class="big-emoji">🙈</div>
+    <h2>Everyone look away!</h2>
+    <div id="spotlightName" class="player-spotlight"></div>
+    <p class="gate-instruction">
+      Only <strong id="gateDrawerName"></strong> should look at the screen now.<br>
+      Everyone else — eyes closed or look away!
+    </p>
+    <button class="btn btn-primary" id="showWordBtn">👁 I'm alone — Show my word</button>
+  </div>
+</div>
+
+<!-- ── STEP 2: PRIVATE WORD PEEK (only the drawer sees) ───── -->
+<div id="drawerPeekModal" class="overlay overlay-solid">
+  <div class="modal-box">
+    <p class="peek-label">🎨 Your word to draw</p>
     <div id="drawerPeekWord" class="modal-word"></div>
-    <p style="color:var(--muted);margin-bottom:1.4rem;font-size:.88rem">Memorise it, then pass the screen to everyone</p>
-    <button class="btn btn-primary" id="drawerReadyBtn">✏️ I'm ready — Start Timer!</button>
+    <p class="peek-hint">
+      Memorise it · Put the device where everyone can see · Start drawing!
+    </p>
+    </p>
+    <button class="btn btn-success" id="drawerReadyBtn">✅ Got it — Start Timer!</button>
   </div>
 </div>
 
 <!-- ── END-OF-TURN WORD MODAL ─────────────────────────────── -->
-<div id="wordModal" class="overlay">
+<div id="wordModal" class="overlay overlay-dim">
   <div class="modal-box">
     <h2>The word was…</h2>
     <div id="modalWord" class="modal-word"></div>
@@ -555,8 +625,12 @@ const wordModal    = document.getElementById('wordModal');
 const modalWord    = document.getElementById('modalWord');
 const modalNextBtn = document.getElementById('modalNextBtn');
 
-const drawerModal      = document.getElementById('drawerModal');
-const drawerPeekName   = document.getElementById('drawerPeekName');
+const lookAwayGate   = document.getElementById('lookAwayGate');
+const spotlightName  = document.getElementById('spotlightName');
+const gateDrawerName = document.getElementById('gateDrawerName');
+const showWordBtn    = document.getElementById('showWordBtn');
+
+const drawerPeekModal  = document.getElementById('drawerPeekModal');
 const drawerPeekWord   = document.getElementById('drawerPeekWord');
 const drawerReadyBtn   = document.getElementById('drawerReadyBtn');
 
@@ -704,8 +778,7 @@ function renderWordBlanks() {
       const char = document.createElement('div');
       char.className = 'letter-char hidden';
       char.dataset.globalIdx = getGlobalIdx(words, wi, i);
-      char.dataset.letter = w[i].toUpperCase();
-      char.textContent = w[i].toUpperCase();
+      // Letter value stored only in JS state — not in the DOM text until revealed
 
       const line = document.createElement('div');
       line.className = 'letter-line';
@@ -719,7 +792,7 @@ function renderWordBlanks() {
     // Space visual between words
     if (wi < words.length - 1) {
       const spacer = document.createElement('div');
-      spacer.style.cssText = 'width:.6rem;flex-shrink:0;';
+      spacer.className = 'word-spacer';
       wordBlanks.appendChild(spacer);
     }
   });
@@ -738,6 +811,12 @@ function getGlobalIdx(words, wordIdx, letterIdx) {
   return idx + letterIdx;
 }
 
+// Return the letter (uppercase) at a flat index across all words (spaces skipped)
+function getLetterAt(globalIdx) {
+  const letters = state.currentWord.replace(/ /g, '');
+  return letters[globalIdx] ? letters[globalIdx].toUpperCase() : '';
+}
+
 function getTotalLetterCount() {
   return state.currentWord.replace(/ /g, '').length;
 }
@@ -753,9 +832,13 @@ function revealLetter() {
   const pick = unrevealed[Math.floor(Math.random() * unrevealed.length)];
   state.revealedIndices.add(pick);
 
-  // Show the letter in DOM
-  const charEl = wordBlanks.querySelector(`[data-global-idx="${pick}"]`);
-  if (charEl) charEl.classList.remove('hidden');
+  // Inject the letter text into the DOM only at reveal time
+  const safeIdx = parseInt(pick, 10);
+  const charEl = Number.isInteger(safeIdx) ? wordBlanks.querySelector(`[data-global-idx="${safeIdx}"]`) : null;
+  if (charEl) {
+    charEl.textContent = getLetterAt(pick);
+    charEl.classList.remove('hidden');
+  }
 }
 
 function updateRevealBar() {
@@ -862,15 +945,25 @@ function advanceTurn() {
   startTurn();
 }
 
-// ── Drawer's private peek ─────────────────────────────────
+// ── Two-step private word reveal ─────────────────────────
 function showDrawerModal() {
-  drawerPeekName.textContent = state.players[state.currentPlayerIdx];
-  drawerPeekWord.textContent = state.currentWord.toUpperCase();
-  drawerModal.classList.add('open');
+  const name = state.players[state.currentPlayerIdx];
+  // Step 1: look-away gate (visible to all)
+  spotlightName.textContent = name + "'s turn!";
+  gateDrawerName.textContent = name;
+  lookAwayGate.classList.add('open');
 }
 
+// Step 1 → Step 2: drawer taps to see word privately
+showWordBtn.addEventListener('click', () => {
+  lookAwayGate.classList.remove('open');
+  drawerPeekWord.textContent = state.currentWord.toUpperCase();
+  drawerPeekModal.classList.add('open');
+});
+
+// Step 2 → Game: drawer has memorised the word, start timer
 drawerReadyBtn.addEventListener('click', () => {
-  drawerModal.classList.remove('open');
+  drawerPeekModal.classList.remove('open');
   startTimer();
   scheduleReveal();
 });
@@ -880,9 +973,13 @@ let modalCallback = null;
 
 function showWordModal(cb) {
   modalCallback = cb;
-  // Reveal all letters first
+  // Inject all letter texts into DOM and make them visible
+  const letters = state.currentWord.replace(/ /g, '');
   const charEls = wordBlanks.querySelectorAll('.letter-char');
-  charEls.forEach(el => el.classList.remove('hidden'));
+  charEls.forEach((el, i) => {
+    el.textContent = letters[i] ? letters[i].toUpperCase() : '';
+    el.classList.remove('hidden');
+  });
 
   modalWord.textContent = state.currentWord.toUpperCase();
   wordModal.classList.add('open');
