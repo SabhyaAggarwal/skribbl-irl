@@ -585,6 +585,8 @@ const state = {
   currentWord: '',
   revealedIndices: new Set(),  // flat index into all letters (spaces skipped)
   letterRevealInterval: 15,    // seconds between reveals
+  maxAutoReveals: 0,           // cap at half the letters
+  autoRevealsDone: 0,
   revealTimerId: null,
   timerIntervalId: null,
   timeLeft: 90,
@@ -615,6 +617,7 @@ const timerArc        = document.getElementById('timerArc');
 const drawerName      = document.getElementById('drawerName');
 const wordBlanks      = document.getElementById('wordBlanks');
 const wordHint        = document.getElementById('wordHint');
+const revealBar       = document.getElementById('revealBar');
 const revealCountdown = document.getElementById('revealCountdown');
 const turnList        = document.getElementById('turnList');
 const nextTurnBtn     = document.getElementById('nextTurnBtn');
@@ -636,6 +639,8 @@ const drawerReadyBtn   = document.getElementById('drawerReadyBtn');
 
 const endSummary   = document.getElementById('endSummary');
 const playAgainBtn = document.getElementById('playAgainBtn');
+
+if (revealBar) revealBar.style.display = 'none'; // Hide next-letter hint per UX request
 
 // ═══════════════════════════════════════════════════════════
 //  SETUP SCREEN LOGIC
@@ -742,8 +747,11 @@ function startTurn() {
   state.revealedIndices = new Set();
   state.timeLeft = state.turnTime;
   const letterCount = getTotalLetterCount();
-  // Reveal cadence: totalTime / (letters - 2). Guard for tiny words to avoid divide-by-zero.
-  state.letterRevealInterval = Math.max(1, Math.floor(state.turnTime / Math.max(1, letterCount - 2)));
+  state.maxAutoReveals = Math.floor(letterCount / 2);
+  state.autoRevealsDone = 0;
+  // Reveal cadence: totalTime / ((letters / 2) + 1). Guard for tiny words to avoid divide-by-zero.
+  const denom = (letterCount / 2) + 1;
+  state.letterRevealInterval = Math.max(1, Math.floor(state.turnTime / Math.max(1, denom)));
   state.revealTimeLeft = state.letterRevealInterval;
 
   // UI
@@ -845,16 +853,30 @@ function revealLetter() {
 }
 
 function updateRevealBar() {
-  revealCountdown.textContent = state.revealTimeLeft;
+  if (revealCountdown) revealCountdown.textContent = state.revealTimeLeft;
 }
 
 function scheduleReveal() {
   clearInterval(state.revealTimerId);
+  if (state.maxAutoReveals <= 0) return;
+  state.revealTimeLeft = state.letterRevealInterval;
+  updateRevealBar();
   state.revealTimerId = setInterval(() => {
+    if (state.autoRevealsDone >= state.maxAutoReveals) {
+      clearInterval(state.revealTimerId);
+      state.revealTimerId = null;
+      return;
+    }
     state.revealTimeLeft--;
     updateRevealBar();
     if (state.revealTimeLeft <= 0) {
       revealLetter();
+      state.autoRevealsDone++;
+      if (state.autoRevealsDone >= state.maxAutoReveals) {
+        clearInterval(state.revealTimerId);
+        state.revealTimerId = null;
+        return;
+      }
       state.revealTimeLeft = state.letterRevealInterval;
     }
   }, 1000);
