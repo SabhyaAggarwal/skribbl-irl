@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skribbl IRL – Real Life Drawing Helper</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #1a1a2e;
+      --card: #16213e;
+      --accent: #e94560;
+      --accent2: #0f3460;
+      --green: #4caf50;
+      --yellow: #ffc107;
+      --text: #eaeaea;
+      --muted: #8888aa;
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(0,0,0,.4);
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    h1 { font-size: 2.4rem; font-weight: 800; letter-spacing: -1px; }
+    h2 { font-size: 1.5rem; font-weight: 700; }
+    h3 { font-size: 1.1rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+    .accent { color: var(--accent); }
+
+    /* ── Screens ──────────────────────────────────────── */
+    .screen { display: none; width: 100%; max-width: 700px; }
+    .screen.active { display: block; }
+
+    /* ── Card ─────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Form Elements ────────────────────────────────── */
+    label { display: block; margin-bottom: .4rem; font-size: .9rem; color: var(--muted); font-weight: 600; }
+
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      padding: .6rem .85rem;
+      border-radius: 8px;
+      border: 1.5px solid #2a2a4a;
+      background: #0d0d1f;
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+
+    .form-row { margin-bottom: 1.1rem; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    /* ── Player Inputs ────────────────────────────────── */
+    #playerList { display: flex; flex-direction: column; gap: .6rem; margin-top: .8rem; }
+    .player-entry { display: flex; gap: .5rem; align-items: center; }
+    .player-entry input { flex: 1; }
+    .player-entry button {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: .3rem .5rem;
+      border-radius: 6px;
+      transition: color .15s, background .15s;
+    }
+    .player-entry button:hover { color: var(--accent); background: rgba(233,69,96,.1); }
+
+    #addPlayerBtn {
+      margin-top: .7rem;
+      background: transparent;
+      border: 1.5px dashed var(--muted);
+      color: var(--muted);
+      width: 100%;
+      padding: .55rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: .95rem;
+      transition: all .2s;
+    }
+    #addPlayerBtn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Difficulty Selector ──────────────────────────── */
+    .difficulty-group { display: flex; gap: .7rem; }
+    .diff-btn {
+      flex: 1;
+      padding: .6rem;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      background: #0d0d1f;
+      color: var(--muted);
+      font-weight: 700;
+      cursor: pointer;
+      font-size: .95rem;
+      transition: all .2s;
+    }
+    .diff-btn:hover { border-color: var(--accent); color: var(--text); }
+    .diff-btn.selected { border-color: var(--accent); color: var(--text); background: rgba(233,69,96,.15); }
+    .diff-btn.easy.selected   { border-color: var(--green);  background: rgba(76,175,80,.15);  color: #81c784; }
+    .diff-btn.medium.selected { border-color: var(--yellow); background: rgba(255,193,7,.12); color: #ffd54f; }
+    .diff-btn.hard.selected   { border-color: var(--accent); background: rgba(233,69,96,.15); color: #ef9a9a; }
+
+    /* ── Buttons ──────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      padding: .75rem 1.6rem;
+      border-radius: 8px;
+      border: none;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .1s, opacity .15s;
+      letter-spacing: .3px;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { opacity: .88; }
+    .btn-secondary { background: #2a2a4a; color: var(--text); }
+    .btn-secondary:hover { background: #33334d; }
+    .btn-success { background: var(--green); color: #fff; }
+    .btn-success:hover { opacity: .88; }
+    .btn-full { width: 100%; }
+
+    /* ── Game Header ──────────────────────────────────── */
+    #gameHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.2rem;
+      flex-wrap: wrap;
+      gap: .8rem;
+    }
+
+    .round-badge {
+      background: var(--accent2);
+      color: var(--muted);
+      border-radius: 20px;
+      padding: .3rem .9rem;
+      font-size: .88rem;
+      font-weight: 600;
+    }
+
+    /* ── Timer ────────────────────────────────────────── */
+    #timerWrapper {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+
+    #timerCircle {
+      position: relative;
+      width: 68px;
+      height: 68px;
+      flex-shrink: 0;
+    }
+    #timerCircle svg {
+      transform: rotate(-90deg);
+      width: 68px;
+      height: 68px;
+    }
+    #timerTrack { fill: none; stroke: #2a2a4a; stroke-width: 6; }
+    #timerArc   { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round;
+                  stroke-dasharray: 188; stroke-dashoffset: 0; transition: stroke .4s, stroke-dashoffset .9s linear; }
+    #timerLabel {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; font-weight: 800;
+    }
+
+    /* ── Drawer Card ──────────────────────────────────── */
+    #drawerCard {
+      text-align: center;
+      padding: 1.4rem 2rem;
+      margin-bottom: 1.2rem;
+    }
+    #drawerLabel { font-size: .85rem; color: var(--muted); margin-bottom: .4rem; text-transform: uppercase; letter-spacing: 1px; }
+    #drawerName  { font-size: 2rem; font-weight: 800; color: var(--accent); }
+
+    /* ── Word Display ─────────────────────────────────── */
+    #wordCard { text-align: center; padding: 1.6rem 2rem; margin-bottom: 1.2rem; }
+    #wordBlanks {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: .4rem;
+      margin-top: .5rem;
+    }
+    .word-group { display: flex; gap: .35rem; }
+    .letter-slot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .15rem;
+    }
+    .letter-char {
+      width: 2rem;
+      height: 2.4rem;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+      transition: opacity .3s;
+    }
+    .letter-line {
+      width: 2rem;
+      height: 3px;
+      background: var(--muted);
+      border-radius: 2px;
+    }
+    .letter-char.hidden { opacity: 0; }
+
+    /* ── Word Count hint ──────────────────────────────── */
+    #wordHint { font-size: .9rem; color: var(--muted); margin-top: .8rem; }
+
+    /* ── Reveal Bar ───────────────────────────────────── */
+    #revealBar {
+      background: #0d0d1f;
+      border-radius: 8px;
+      padding: .5rem .85rem;
+      font-size: .88rem;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 1.2rem;
+    }
+    #revealBar span { color: var(--yellow); font-weight: 700; }
+
+    /* ── Player List ──────────────────────────────────── */
+    #turnList { display: flex; flex-direction: column; gap: .5rem; }
+    .turn-item {
+      display: flex;
+      align-items: center;
+      gap: .8rem;
+      padding: .55rem .85rem;
+      border-radius: 8px;
+      background: #0d0d1f;
+      font-size: .95rem;
+      transition: background .2s;
+    }
+    .turn-item.active { background: rgba(233,69,96,.18); border: 1.5px solid var(--accent); font-weight: 700; }
+    .turn-item.done   { opacity: .45; }
+    .turn-number { width: 1.4rem; text-align: right; color: var(--muted); font-size: .85rem; }
+    .turn-name { flex: 1; }
+    .turn-badge {
+      font-size: .75rem;
+      padding: .15rem .5rem;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    /* ── Action Row ───────────────────────────────────── */
+    #actionRow {
+      display: flex;
+      gap: .8rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 1.2rem;
+    }
+
+    /* ── Endscreen ────────────────────────────────────── */
+    #endScreen .card { text-align: center; }
+    #endScreen h2 { font-size: 2rem; margin-bottom: .5rem; }
+    #endSummary { margin-top: 1.2rem; text-align: left; }
+    #endSummary li { padding: .35rem 0; border-bottom: 1px solid #2a2a4a; font-size: .95rem; }
+    #endSummary li:last-child { border: none; }
+
+    /* ── Overlays ─────────────────────────────────────── */
+    .overlay {
+      position: fixed; inset: 0;
+      display: none;
+      align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    .overlay.open { display: flex; }
+
+    /* Standard modal (semi-transparent bg) */
+    .overlay-dim { background: rgba(0,0,0,.8); }
+
+    /* Full-screen solid overlays (no peeking!) */
+    .overlay-solid { background: #0a0a18; }
+
+    .modal-box {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 2rem 2.5rem;
+      max-width: 440px;
+      width: 90%;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .modal-box h2 { margin-bottom: .5rem; font-size: 1.6rem; }
+    .modal-word {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin: .8rem 0 1.2rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    /* ── Look-away gate (Step 1) ──────────────────────── */
+    #lookAwayGate .modal-box {
+      border: 2px solid var(--muted);
+      max-width: 480px;
+    }
+    #lookAwayGate .big-emoji { font-size: 4rem; margin-bottom: .4rem; }
+    #lookAwayGate h2 { font-size: 1.8rem; }
+    #lookAwayGate .player-spotlight {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent);
+      background: rgba(233,69,96,.12);
+      border-radius: 8px;
+      padding: .5rem 1rem;
+      margin: .8rem 0 1rem;
+      display: inline-block;
+    }
+    #lookAwayGate .gate-instruction {
+      color: var(--muted);
+      font-size: .95rem;
+      margin-bottom: 1.4rem;
+    }
+    #lookAwayGate .gate-instruction strong { color: var(--text); }
+
+    /* ── Private word peek (Step 2) ──────────────────── */
+    #drawerPeekModal .modal-box {
+      border: 2px solid #ffd54f;
+      max-width: 480px;
+    }
+    #drawerPeekModal .modal-word {
+      color: #ffd54f;
+      font-size: 2.6rem;
+      background: rgba(255,213,79,.08);
+      border-radius: 10px;
+      padding: .5rem 1.2rem;
+    }
+    #drawerPeekModal .peek-label {
+      color: var(--muted);
+      font-size: .85rem;
+      margin-bottom: .6rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    #drawerPeekModal .peek-hint {
+      color: var(--muted);
+      margin: .8rem 0 1.4rem;
+      font-size: .9rem;
+    }
+
+    /* ── Word spacer between word groups ──────────────── */
+    .word-spacer { width: .6rem; flex-shrink: 0; }
+
+    /* ── Error messages ───────────────────────────────── */
+    .error { color: var(--accent); font-size: .85rem; margin-top: .4rem; display: none; }
+    .error.show { display: block; }
+
+    /* ── Responsive ───────────────────────────────────── */
+    @media (max-width: 520px) {
+      h1 { font-size: 1.8rem; }
+      .form-grid { grid-template-columns: 1fr; }
+      #drawerName { font-size: 1.5rem; }
+      .letter-char { width: 1.6rem; font-size: 1.1rem; }
+      .letter-line { width: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── SETUP SCREEN ─────────────────────────────────────── -->
+<div id="setupScreen" class="screen active">
+  <h1>🎨 Skribbl <span class="accent">IRL</span></h1>
+  <p style="color:var(--muted);margin:.4rem 0 1.4rem">Real-life drawing game helper</p>
+
+  <!-- Players -->
+  <div class="card">
+    <h3>👥 Players <span style="font-size:.8rem;font-weight:400">(2 – 10)</span></h3>
+    <div id="playerList"></div>
+    <button id="addPlayerBtn">＋ Add Player</button>
+    <div id="playerError" class="error">Add at least 2 players with names.</div>
+  </div>
+
+  <!-- Settings -->
+  <div class="card">
+    <h3>⚙️ Settings</h3>
+    <div class="form-grid">
+      <div class="form-row">
+        <label for="roundsInput">Rounds</label>
+        <input type="number" id="roundsInput" min="1" max="20" value="3" />
+      </div>
+      <div class="form-row">
+        <label for="timeInput">Seconds per turn</label>
+        <input type="number" id="timeInput" min="30" max="300" step="10" value="90" />
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Difficulty</label>
+      <div class="difficulty-group">
+        <button class="diff-btn easy selected" data-diff="easy">🟢 Easy</button>
+        <button class="diff-btn medium" data-diff="medium">🟡 Medium</button>
+        <button class="diff-btn hard" data-diff="hard">🔴 Hard</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary btn-full" id="startBtn">🚀 Start Game</button>
+</div>
+
+<!-- ── GAME SCREEN ───────────────────────────────────────── -->
+<div id="gameScreen" class="screen">
+
+  <div id="gameHeader">
+    <div>
+      <div id="roundLabel" class="round-badge">Round 1 / 3</div>
+    </div>
+    <div id="timerWrapper">
+      <div id="timerCircle">
+        <svg viewBox="0 0 68 68">
+          <circle cx="34" cy="34" r="30" id="timerTrack"/>
+          <circle cx="34" cy="34" r="30" id="timerArc"/>
+        </svg>
+        <div id="timerLabel">90</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drawer -->
+  <div class="card" id="drawerCard">
+    <div id="drawerLabel">Now Drawing</div>
+    <div id="drawerName">Player 1</div>
+  </div>
+
+  <!-- Word Blanks -->
+  <div class="card" id="wordCard">
+    <h3>Guess the word</h3>
+    <div id="wordBlanks"></div>
+    <div id="wordHint"></div>
+  </div>
+
+  <!-- Reveal info -->
+  <div id="revealBar">Next letter reveal in <span id="revealCountdown">–</span> s</div>
+
+  <!-- Player turn list -->
+  <div class="card">
+    <h3 style="margin-bottom:.8rem">Turn Order</h3>
+    <div id="turnList"></div>
+  </div>
+
+  <div id="actionRow">
+    <button class="btn btn-success" id="nextTurnBtn">✅ Next Turn</button>
+    <button class="btn btn-secondary" id="revealWordBtn">👁 Reveal Word</button>
+    <button class="btn btn-secondary" id="endGameBtn">🏳 End Game</button>
+  </div>
+</div>
+
+<!-- ── END SCREEN ────────────────────────────────────────── -->
+<div id="endScreen" class="screen">
+  <div class="card">
+    <h2>🎉 Game Over!</h2>
+    <p style="color:var(--muted)">Thanks for playing Skribbl IRL</p>
+    <ul id="endSummary" style="list-style:none;margin-top:1rem;"></ul>
+    <button class="btn btn-primary btn-full" id="playAgainBtn" style="margin-top:1.4rem">🔄 Play Again</button>
+  </div>
+</div>
+
+<!-- ── STEP 1: LOOK-AWAY GATE (everyone sees this) ────────── -->
+<div id="lookAwayGate" class="overlay overlay-dim">
+  <div class="modal-box">
+    <div class="big-emoji">🙈</div>
+    <h2>Everyone look away!</h2>
+    <div id="spotlightName" class="player-spotlight"></div>
+    <p class="gate-instruction">
+      Only <strong id="gateDrawerName"></strong> should look at the screen now.<br>
+      Everyone else — eyes closed or look away!
+    </p>
+    <button class="btn btn-primary" id="showWordBtn">👁 I'm alone — Show my word</button>
+  </div>
+</div>
+
+<!-- ── STEP 2: PRIVATE WORD PEEK (only the drawer sees) ───── -->
+<div id="drawerPeekModal" class="overlay overlay-solid">
+  <div class="modal-box">
+    <p class="peek-label">🎨 Your word to draw</p>
+    <div id="drawerPeekWord" class="modal-word"></div>
+    <p class="peek-hint">
+      Memorise it · Put the device where everyone can see · Start drawing!
+    </p>
+    </p>
+    <button class="btn btn-success" id="drawerReadyBtn">✅ Got it — Start Timer!</button>
+  </div>
+</div>
+
+<!-- ── END-OF-TURN WORD MODAL ─────────────────────────────── -->
+<div id="wordModal" class="overlay overlay-dim">
+  <div class="modal-box">
+    <h2>The word was…</h2>
+    <div id="modalWord" class="modal-word"></div>
+    <p style="color:var(--muted);margin-bottom:1.4rem;font-size:.95rem">Everyone can see it now!</p>
+    <button class="btn btn-primary" id="modalNextBtn">Continue →</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  WORD LISTS
+// ═══════════════════════════════════════════════════════════
+const WORDS = {
+  easy: [
+    // Animals
+    "cat","dog","fish","bird","frog","lion","duck","bear","cow","pig",
+    "horse","snake","bee","ant","owl","shark","whale","crab","wolf","deer",
+    // Objects
+    "hat","cup","ball","book","shoe","key","door","chair","table","bed",
+    "bag","ring","box","fan","lamp","flag","star","heart","moon","sun",
+    // Food
+    "apple","pizza","cake","egg","bread","corn","rice","milk","juice","ice",
+    // Actions/Simple things
+    "tree","house","car","bus","boat","bike","fire","rain","cloud","snow",
+    "flower","leaf","rock","hand","eye","nose","ear","man","woman","baby"
+  ],
+
+  medium: [
+    // Animals
+    "elephant","giraffe","penguin","dolphin","parrot","spider","scorpion","turtle","rabbit","monkey",
+    "crocodile","jellyfish","octopus","flamingo","kangaroo","cheetah","gorilla","peacock","porcupine","butterfly",
+    // Objects / Places
+    "umbrella","balloon","ladder","bicycle","guitar","camera","rocket","bridge","castle","island",
+    "volcano","lighthouse","compass","telescope","microscope","trophy","lantern","magnet","puppet","kite",
+    // Food / Nature
+    "watermelon","pineapple","spaghetti","sandwich","popcorn","mushroom","broccoli","avocado","tornado","rainbow",
+    // Activities
+    "swimming","painting","juggling","surfing","cooking","fishing","skiing","dancing","reading","climbing"
+  ],
+
+  hard: [
+    // Complex objects
+    "submarine","parachute","skateboard","accordion","typewriter","escalator","helicopter","boombox","binoculars","chandelier",
+    // Abstract/harder concepts
+    "democracy","evolution","gravity","electricity","magician","nightmare","jealousy","freedom","adventure","detective",
+    // Places/structures
+    "colosseum","pyramid","skyscraper","waterfall","thunderstorm","earthquake","avalanche","quicksand","labyrinth","monastery",
+    // Tricky everyday
+    "escalator","crossword","hibernation","vaccination","constellation","fermentation","perspective","camouflage","ventriloquist","photosynthesis"
+  ]
+};
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+const state = {
+  players: [],        // array of player name strings
+  rounds: 3,
+  turnTime: 90,
+  difficulty: 'easy',
+
+  currentRound: 1,
+  currentPlayerIdx: 0,
+  usedWords: new Set(),
+
+  currentWord: '',
+  revealedIndices: new Set(),  // flat index into all letters (spaces skipped)
+  letterRevealInterval: 15,    // seconds between reveals
+  maxAutoReveals: 0,           // cap at half the letters
+  autoRevealsDone: 0,
+  revealTimerId: null,
+  timerIntervalId: null,
+  timeLeft: 90,
+  revealTimeLeft: 15,
+
+  // summary
+  turnLog: [],        // {player, word, round}
+};
+
+// ═══════════════════════════════════════════════════════════
+//  DOM REFS
+// ═══════════════════════════════════════════════════════════
+const setupScreen  = document.getElementById('setupScreen');
+const gameScreen   = document.getElementById('gameScreen');
+const endScreen    = document.getElementById('endScreen');
+
+const playerList   = document.getElementById('playerList');
+const addPlayerBtn = document.getElementById('addPlayerBtn');
+const roundsInput  = document.getElementById('roundsInput');
+const timeInput    = document.getElementById('timeInput');
+const playerError  = document.getElementById('playerError');
+const diffBtns     = document.querySelectorAll('.diff-btn');
+const startBtn     = document.getElementById('startBtn');
+
+const roundLabel      = document.getElementById('roundLabel');
+const timerLabel      = document.getElementById('timerLabel');
+const timerArc        = document.getElementById('timerArc');
+const drawerName      = document.getElementById('drawerName');
+const wordBlanks      = document.getElementById('wordBlanks');
+const wordHint        = document.getElementById('wordHint');
+const revealBar       = document.getElementById('revealBar');
+const revealCountdown = document.getElementById('revealCountdown');
+const turnList        = document.getElementById('turnList');
+const nextTurnBtn     = document.getElementById('nextTurnBtn');
+const revealWordBtn   = document.getElementById('revealWordBtn');
+const endGameBtn      = document.getElementById('endGameBtn');
+
+const wordModal    = document.getElementById('wordModal');
+const modalWord    = document.getElementById('modalWord');
+const modalNextBtn = document.getElementById('modalNextBtn');
+
+const lookAwayGate   = document.getElementById('lookAwayGate');
+const spotlightName  = document.getElementById('spotlightName');
+const gateDrawerName = document.getElementById('gateDrawerName');
+const showWordBtn    = document.getElementById('showWordBtn');
+
+const drawerPeekModal  = document.getElementById('drawerPeekModal');
+const drawerPeekWord   = document.getElementById('drawerPeekWord');
+const drawerReadyBtn   = document.getElementById('drawerReadyBtn');
+
+const endSummary   = document.getElementById('endSummary');
+const playAgainBtn = document.getElementById('playAgainBtn');
+
+if (revealBar) revealBar.style.display = 'none'; // Hide next-letter hint per UX request
+
+// ═══════════════════════════════════════════════════════════
+//  SETUP SCREEN LOGIC
+// ═══════════════════════════════════════════════════════════
+
+function createPlayerEntry(value = '') {
+  const div = document.createElement('div');
+  div.className = 'player-entry';
+  div.innerHTML = `
+    <input type="text" placeholder="Player name" maxlength="20" value="${escapeHtml(value)}" />
+    <button title="Remove" aria-label="Remove player">✕</button>
+  `;
+  div.querySelector('button').addEventListener('click', () => {
+    if (playerList.children.length > 2) {
+      div.remove();
+    } else {
+      div.querySelector('input').value = '';
+    }
+  });
+  return div;
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Seed two players on load
+playerList.appendChild(createPlayerEntry(''));
+playerList.appendChild(createPlayerEntry(''));
+
+addPlayerBtn.addEventListener('click', () => {
+  if (playerList.children.length < 10) {
+    playerList.appendChild(createPlayerEntry(''));
+    playerList.lastElementChild.querySelector('input').focus();
+  } else {
+    addPlayerBtn.textContent = '🚫 Max 10 players reached';
+    setTimeout(() => { addPlayerBtn.textContent = '＋ Add Player'; }, 1500);
+  }
+});
+
+diffBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    diffBtns.forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    state.difficulty = btn.dataset.diff;
+  });
+});
+
+startBtn.addEventListener('click', () => {
+  const names = [...playerList.querySelectorAll('input')]
+    .map(i => i.value.trim())
+    .filter(Boolean);
+
+  if (names.length < 2) {
+    playerError.classList.add('show');
+    return;
+  }
+  playerError.classList.remove('show');
+
+  state.players = names;
+  state.rounds   = Math.max(1, Math.min(20, parseInt(roundsInput.value) || 3));
+  state.turnTime = Math.max(30, Math.min(300, parseInt(timeInput.value) || 90));
+  state.letterRevealInterval = 5; // will be recalculated per turn based on word length
+
+  state.currentRound     = 1;
+  state.currentPlayerIdx = 0;
+  state.usedWords        = new Set();
+  state.turnLog          = [];
+
+  showScreen(gameScreen);
+  startTurn();
+});
+
+// ═══════════════════════════════════════════════════════════
+//  SCREEN SWITCHING
+// ═══════════════════════════════════════════════════════════
+function showScreen(screen) {
+  [setupScreen, gameScreen, endScreen].forEach(s => s.classList.remove('active'));
+  screen.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  GAME LOGIC
+// ═══════════════════════════════════════════════════════════
+
+function pickWord() {
+  const pool = WORDS[state.difficulty];
+  const available = pool.filter(w => !state.usedWords.has(w));
+  const source = available.length > 0 ? available : pool; // recycle if exhausted
+  return source[Math.floor(Math.random() * source.length)];
+}
+
+function startTurn() {
+  clearTimers();
+
+  const word = pickWord();
+  state.usedWords.add(word);
+  state.currentWord = word;
+  state.revealedIndices = new Set();
+  state.timeLeft = state.turnTime;
+  const letterCount = getTotalLetterCount();
+  state.maxAutoReveals = Math.floor(letterCount / 2);
+  state.autoRevealsDone = 0;
+  // Reveal cadence: totalTime / ((letters / 2) + 1). Guard for tiny words to avoid divide-by-zero.
+  const denom = (letterCount / 2) + 1;
+  state.letterRevealInterval = Math.max(1, Math.floor(state.turnTime / Math.max(1, denom)));
+  state.revealTimeLeft = state.letterRevealInterval;
+
+  // UI
+  updateRoundLabel();
+  updateDrawerDisplay();
+  renderWordBlanks();
+  updateTurnList();
+  updateRevealBar();
+
+  // Show private word to drawer before starting timer
+  showDrawerModal();
+}
+
+function updateRoundLabel() {
+  roundLabel.textContent = `Round ${state.currentRound} / ${state.rounds}`;
+}
+
+function updateDrawerDisplay() {
+  drawerName.textContent = state.players[state.currentPlayerIdx];
+}
+
+// Build blank slots
+function renderWordBlanks() {
+  wordBlanks.innerHTML = '';
+  const words = state.currentWord.split(' ');
+
+  words.forEach((w, wi) => {
+    const group = document.createElement('div');
+    group.className = 'word-group';
+
+    for (let i = 0; i < w.length; i++) {
+      const slot = document.createElement('div');
+      slot.className = 'letter-slot';
+
+      const char = document.createElement('div');
+      char.className = 'letter-char hidden';
+      char.dataset.globalIdx = getGlobalIdx(words, wi, i);
+      // Letter value stored only in JS state — not in the DOM text until revealed
+
+      const line = document.createElement('div');
+      line.className = 'letter-line';
+
+      slot.appendChild(char);
+      slot.appendChild(line);
+      group.appendChild(slot);
+    }
+    wordBlanks.appendChild(group);
+
+    // Space visual between words
+    if (wi < words.length - 1) {
+      const spacer = document.createElement('div');
+      spacer.className = 'word-spacer';
+      wordBlanks.appendChild(spacer);
+    }
+  });
+
+  // Hint text
+  const wordCount = words.length;
+  const lengths = words.map(w => w.length).join(', ');
+  wordHint.textContent = wordCount > 1
+    ? `${wordCount} words · ${lengths} letters`
+    : `${words[0].length} letters`;
+}
+
+function getGlobalIdx(words, wordIdx, letterIdx) {
+  let idx = 0;
+  for (let wi = 0; wi < wordIdx; wi++) idx += words[wi].length;
+  return idx + letterIdx;
+}
+
+// Return the letter (uppercase) at a flat index across all words (spaces skipped)
+function getLetterAt(globalIdx) {
+  const letters = state.currentWord.replace(/ /g, '');
+  return letters[globalIdx] ? letters[globalIdx].toUpperCase() : '';
+}
+
+function getTotalLetterCount() {
+  return state.currentWord.replace(/ /g, '').length;
+}
+
+function revealLetter() {
+  const total = getTotalLetterCount();
+  const unrevealed = [];
+  for (let i = 0; i < total; i++) {
+    if (!state.revealedIndices.has(i)) unrevealed.push(i);
+  }
+  if (unrevealed.length === 0) return;
+
+  const pick = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+  state.revealedIndices.add(pick);
+
+  // Inject the letter text into the DOM only at reveal time
+  const safeIdx = parseInt(pick, 10);
+  const charEl = Number.isInteger(safeIdx) ? wordBlanks.querySelector(`[data-global-idx="${safeIdx}"]`) : null;
+  if (charEl) {
+    charEl.textContent = getLetterAt(pick);
+    charEl.classList.remove('hidden');
+  }
+}
+
+function updateRevealBar() {
+  if (revealCountdown) revealCountdown.textContent = state.revealTimeLeft;
+}
+
+function scheduleReveal() {
+  clearInterval(state.revealTimerId);
+  if (state.maxAutoReveals <= 0) return;
+  state.revealTimeLeft = state.letterRevealInterval;
+  updateRevealBar();
+  state.revealTimerId = setInterval(() => {
+    if (state.autoRevealsDone >= state.maxAutoReveals) {
+      clearInterval(state.revealTimerId);
+      state.revealTimerId = null;
+      return;
+    }
+    state.revealTimeLeft--;
+    updateRevealBar();
+    if (state.revealTimeLeft <= 0) {
+      revealLetter();
+      state.autoRevealsDone++;
+      if (state.autoRevealsDone >= state.maxAutoReveals) {
+        clearInterval(state.revealTimerId);
+        state.revealTimerId = null;
+        return;
+      }
+      state.revealTimeLeft = state.letterRevealInterval;
+    }
+  }, 1000);
+}
+
+// ── Timer ────────────────────────────────────────────────
+const CIRCUMFERENCE = 2 * Math.PI * 30; // r=30 → ~188.5
+
+function startTimer() {
+  timerArc.style.strokeDasharray = CIRCUMFERENCE;
+  updateTimerUI();
+
+  clearInterval(state.timerIntervalId);
+  state.timerIntervalId = setInterval(() => {
+    state.timeLeft--;
+    updateTimerUI();
+    if (state.timeLeft <= 0) {
+      clearTimers();
+      autoNextTurn();
+    }
+  }, 1000);
+}
+
+function updateTimerUI() {
+  timerLabel.textContent = state.timeLeft;
+  const frac = state.timeLeft / state.turnTime;
+  const offset = CIRCUMFERENCE * (1 - frac);
+  timerArc.style.strokeDashoffset = offset;
+  // colour: green → yellow → red
+  if (frac > 0.5)       timerArc.style.stroke = '#4caf50';
+  else if (frac > 0.25) timerArc.style.stroke = '#ffc107';
+  else                  timerArc.style.stroke = '#e94560';
+}
+
+function clearTimers() {
+  clearInterval(state.timerIntervalId);
+  clearInterval(state.revealTimerId);
+}
+
+// ── Turn list ────────────────────────────────────────────
+function updateTurnList() {
+  turnList.innerHTML = '';
+  state.players.forEach((name, idx) => {
+    const div = document.createElement('div');
+    div.className = 'turn-item' +
+      (idx === state.currentPlayerIdx ? ' active' : '') +
+      (isPlayerDone(idx) ? ' done' : '');
+
+    div.innerHTML = `
+      <span class="turn-number">${idx + 1}</span>
+      <span class="turn-name">${escapeHtml(name)}</span>
+      ${idx === state.currentPlayerIdx ? '<span class="turn-badge">Drawing</span>' : ''}
+    `;
+    turnList.appendChild(div);
+  });
+}
+
+function isPlayerDone(idx) {
+  // In the current round, have they already gone?
+  return state.turnLog.some(t => t.round === state.currentRound && t.playerIdx === idx);
+}
+
+// ── Advance turn ─────────────────────────────────────────
+function autoNextTurn() {
+  // Reveal word on time-up
+  showWordModal(() => advanceTurn());
+}
+
+function advanceTurn() {
+  // Log this turn
+  state.turnLog.push({
+    round: state.currentRound,
+    playerIdx: state.currentPlayerIdx,
+    player: state.players[state.currentPlayerIdx],
+    word: state.currentWord,
+  });
+
+  state.currentPlayerIdx++;
+
+  if (state.currentPlayerIdx >= state.players.length) {
+    // End of round
+    state.currentRound++;
+    state.currentPlayerIdx = 0;
+
+    if (state.currentRound > state.rounds) {
+      endGame();
+      return;
+    }
+  }
+
+  startTurn();
+}
+
+// ── Two-step private word reveal ─────────────────────────
+function showDrawerModal() {
+  const name = state.players[state.currentPlayerIdx];
+  // Step 1: look-away gate (visible to all)
+  spotlightName.textContent = name + "'s turn!";
+  gateDrawerName.textContent = name;
+  lookAwayGate.classList.add('open');
+}
+
+// Step 1 → Step 2: drawer taps to see word privately
+showWordBtn.addEventListener('click', () => {
+  lookAwayGate.classList.remove('open');
+  drawerPeekWord.textContent = state.currentWord.toUpperCase();
+  drawerPeekModal.classList.add('open');
+});
+
+// Step 2 → Game: drawer has memorised the word, start timer
+drawerReadyBtn.addEventListener('click', () => {
+  drawerPeekModal.classList.remove('open');
+  startTimer();
+  scheduleReveal();
+});
+
+// ── Word Modal ────────────────────────────────────────────
+let modalCallback = null;
+
+function showWordModal(cb) {
+  modalCallback = cb;
+  // Inject all letter texts into DOM and make them visible
+  const letters = state.currentWord.replace(/ /g, '');
+  const charEls = wordBlanks.querySelectorAll('.letter-char');
+  charEls.forEach((el, i) => {
+    el.textContent = letters[i] ? letters[i].toUpperCase() : '';
+    el.classList.remove('hidden');
+  });
+
+  modalWord.textContent = state.currentWord.toUpperCase();
+  wordModal.classList.add('open');
+}
+
+modalNextBtn.addEventListener('click', () => {
+  wordModal.classList.remove('open');
+  if (modalCallback) { modalCallback(); modalCallback = null; }
+});
+
+// ── Buttons ───────────────────────────────────────────────
+nextTurnBtn.addEventListener('click', () => {
+  clearTimers();
+  showWordModal(() => advanceTurn());
+});
+
+revealWordBtn.addEventListener('click', () => {
+  clearTimers();
+  showWordModal(() => {
+    // Resume turn after reveal? Just start next turn
+    advanceTurn();
+  });
+});
+
+endGameBtn.addEventListener('click', () => {
+  clearTimers();
+  endGame();
+});
+
+// ── End Game ──────────────────────────────────────────────
+function endGame() {
+  clearTimers();
+  renderEndSummary();
+  showScreen(endScreen);
+}
+
+function renderEndSummary() {
+  endSummary.innerHTML = '';
+  if (state.turnLog.length === 0) {
+    endSummary.innerHTML = '<li>No turns were completed.</li>';
+    return;
+  }
+  state.turnLog.forEach((t, i) => {
+    const li = document.createElement('li');
+    li.textContent = `Round ${t.round} · ${t.player} → "${t.word}"`;
+    endSummary.appendChild(li);
+  });
+}
+
+playAgainBtn.addEventListener('click', () => {
+  showScreen(setupScreen);
+});
+
+</script>
+</body>
+</html>
